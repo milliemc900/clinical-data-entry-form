@@ -1,7 +1,27 @@
+# app.py — Clinical Data Entry Form with Password Protection
+# -----------------------------------------------------------
+# Features:
+# ✅ Password login (sidebar)
+# ✅ BMI auto-calculation
+# ✅ Visit Type selection
+# ✅ Record saving and CSV download
+# ✅ Data persistence within Streamlit session
+
 import streamlit as st
 import pandas as pd
+import os
 
-# --- 1. Data Storage Initialization ---
+# --- 1. PASSWORD PROTECTION ---
+PASSWORD = "clinic2025"  # 👈 change this to your own secure password
+
+st.sidebar.header("🔐 Login Required")
+password_input = st.sidebar.text_input("Enter Password:", type="password")
+
+if password_input != PASSWORD:
+    st.warning("Please enter the correct password to access the app.")
+    st.stop()
+
+# --- 2. SESSION DATA STORAGE ---
 if 'patient_records_df' not in st.session_state:
     st.session_state.patient_records_df = pd.DataFrame(columns=[
         'AGE', 'GENDER', 'WEIGHT(kg)', 'HEIGHT(cm)', 'BMI',
@@ -9,7 +29,7 @@ if 'patient_records_df' not in st.session_state:
         'HTN', 'DIABETES', 'BOTH DM+HTN', 'TREATMENT', 'VISIT TYPE'
     ])
 
-# --- 2. BMI Calculation Function ---
+# --- 3. BMI CALCULATION FUNCTION ---
 def calculate_bmi(weight_kg, height_cm):
     """Calculates BMI given weight in kg and height in cm."""
     try:
@@ -21,11 +41,9 @@ def calculate_bmi(weight_kg, height_cm):
     except:
         return None
 
-# --- 3. Streamlit UI ---
-
+# --- 4. STREAMLIT UI ---
 st.title('🏥 Clinical Data Entry Form')
 
-# Use columns for layout
 col1, col2 = st.columns(2)
 
 with col1:
@@ -38,7 +56,7 @@ with col1:
     st.text_input('BMI:', value=str(bmi_val) if bmi_val is not None else '—', disabled=True)
     waist = st.number_input('Waist Circ (cm):', min_value=10.0, value=10.0, step=0.1)
 
-    # ✅ Add Visit Type here
+    # ✅ Visit Type field
     visit_type = st.selectbox(
         'Visit Type:',
         ['New Visit', 'Follow-up', 'Referral', 'Emergency', 'Routine Checkup']
@@ -55,12 +73,12 @@ with col2:
     dm = st.checkbox('Diabetes (DM)')
     both = st.checkbox('Both DM + HTN')
 
-# --- 4. Button Actions ---
-save_button = st.button('Save Record')
-clear_button = st.button('Clear Form')
-download_button = st.button('Download Records (CSV)')
+# --- 5. BUTTON ACTIONS ---
+save_button = st.button('💾 Save Record')
+clear_button = st.button('🧹 Clear Form')
+download_button = st.button('⬇️ Download Records (CSV)')
 
-# Save Record Logic
+# --- 6. SAVE RECORD LOGIC ---
 if save_button:
     if not age or not weight or not height:
         st.error("Error: Age, Weight, and Height are required.")
@@ -78,37 +96,39 @@ if save_button:
             'DIABETES': 1 if dm else 0,
             'BOTH DM+HTN': 1 if both else 0,
             'TREATMENT': treatment,
-            'VISIT TYPE': visit_type   # ✅ New field added
+            'VISIT TYPE': visit_type
         }
 
         st.session_state.patient_records_df = pd.concat(
             [st.session_state.patient_records_df, pd.DataFrame([new_record])],
             ignore_index=True
         )
-        st.success(f"Record for Age {age} saved successfully!")
 
-# Download Records Logic
+        st.success(f"✅ Record for Age {age} saved successfully!")
+
+# --- 7. DOWNLOAD RECORDS ---
 if download_button:
     if not st.session_state.patient_records_df.empty:
         csv_data = st.session_state.patient_records_df.to_csv(index=False)
         st.download_button(
-            label="Click to Download",
+            label="Click to Download CSV",
             data=csv_data,
             file_name='patient_records_export.csv',
             mime='text/csv'
         )
     else:
-        st.info("No records to download yet.")
+        st.info("ℹ️ No records to download yet.")
 
-# Display Saved Records
+# --- 8. DISPLAY SAVED RECORDS ---
 st.markdown('<hr>', unsafe_allow_html=True)
-st.header("Saved Records")
+st.header("📋 Saved Records")
+
 if not st.session_state.patient_records_df.empty:
     st.dataframe(st.session_state.patient_records_df)
     st.write("Total Records:", len(st.session_state.patient_records_df))
 else:
     st.write("No records saved yet.")
 
-# Clear Form Logic
+# --- 9. CLEAR FORM INFO ---
 if clear_button:
-    st.info("Form clear button clicked. Note: Input fields are not automatically reset without a script rerun.")
+    st.info("🧹 Form clear button clicked. Note: Input fields are not automatically reset without a rerun.")
